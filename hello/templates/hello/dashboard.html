@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Split App Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #333;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        .card {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+            color: #007bff;
+        }
+
+        .card p {
+            font-size: 16px;
+            color: #555;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+       
+</head>
+<body>
+    <h1>Welcome to Your Dashboard,  {{ request.user.username }}</h1>
+
+    <div class="dashboard-container">
+        <div class="dashboard">
+            <div class="card">
+                <h3>Create Group</h3>
+                <p>Create a new group to split expenses.</p>
+                <a href="{% url 'create_group' %}" class="btn">Create</a>
+
+            </div>
+
+            <div class="card">
+                <h3>View Groups</h3>
+                <p>See all the groups you are part of.</p>
+                <a href="{% url 'list_groups' %}" class="btn">View Groups</a>
+            </div>
+
+            <div class="card">
+    <h3>Total Amount to Receive</h3>
+    <p>You are owed: ₹{{ total_owed_to_user|floatformat:2 }}</p>
+    <a href="{% url 'amounts_to_receive' %}" class="btn">View Details</a>
+</div>
+
+<div class="card">
+    <h3>Total Amount to Pay</h3>
+    <p>You owe: ₹{{ total_owed|floatformat:2 }}</p>
+    <a href="{% url 'amounts_owed' %}" class="btn">View Details</a>
+</div>
+        </div>
+    </div>
+      <footer class="footer">
+        <form id="logoutForm" action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Logout</button>
+        </form>
+    </footer>
+      <script>
+        document.getElementById('logoutForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Submit the form via AJAX
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(new FormData(this))
+            })
+            .then(() => {
+                // Clear history and redirect
+                window.location.replace("{% url 'first_page' %}");
+                window.history.replaceState(null, '', "{% url 'first_page' %}");
+            });
+        });
+        
+
+if (performance.navigation.type === 2) {
+    // If page is loaded from back/forward cache
+    window.location.reload(true); // Force reload from server
+}
+
+    </script>
+</body>
+</html>

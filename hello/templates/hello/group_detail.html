@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ group.name }} - Equal Splitter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .member-card { 
+            transition: all 0.2s; 
+        }
+        .member-card:hover { 
+            transform: scale(1.02); 
+        }
+        .expense-item {
+            border-left: 4px solid #007bff;
+            margin-bottom: 10px;
+        }
+        .split-row {
+            transition: background-color 0.2s;
+        }
+        .split-row:hover {
+            background-color: #f8f9fa;
+        }
+        /* Add these styles */
+.border-bottom {
+    border-bottom: 1px solid #dee2e6 !important;
+}
+.form-select-sm, .form-control-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+    </style>
+</head>
+<body>
+    {% if messages %}
+<div class="container mt-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'list_groups' %}">My Groups</a></li>
+                <li class="breadcrumb-item active">{{ group.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">{{ group.name }}</h2>
+                    {% if group.creator == user %}
+                    <span class="badge bg-light text-dark">You created this group</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="lead">{{ group.description|default:"No description provided" }}</p>
+                
+                <hr>
+                
+                <h4>Members</h4>
+                <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+                    {% for member in members %}
+                    <div class="col">
+                        <div class="card member-card">
+                            <div class="card-body">
+                              
+                                <h5 class="card-title">{{ member.user.username }}
+                                     {% if group.creator == user and member.user != user %}
+                                <form method="POST" action="{% url 'remove_member' group.id member.user.id %}" 
+                                   class="delete-member-form"
+                                onsubmit="return confirmRemove('{{ member.user.username }}')">
+                             {% csrf_token %}
+                          <button type="submit" class="btn btn-sm btn-link text-danger p-0">
+                              <i class="fas fa-trash-alt"></i>
+                           </button>
+                             </form>
+                              {% endif %}
+                                </h5>
+                                <p class="card-text text-muted">
+                                    Joined: {{ member.joined_at|date:"M d, Y" }}
+                                    {% if member.user == group.creator %}
+                                    <span class="badge bg-primary ms-2">Creator</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>Expenses</h4>
+                    <!-- Add this right after the Expenses heading section -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+   
+    
+</div>
+
+<!-- Add the filter/sort controls -->
+<div class="card-body border-bottom">
+    <form method="get" class="row g-3" id="filterForm">
+        <div class="col-md-3">
+            <label for="category" class="form-label">Category</label>
+            <select name="category" id="category" class="form-select form-select-sm">
+                <option value="all" {% if current_category == 'all' or not current_category %}selected{% endif %}>All Categories</option>
+                {% for value, name in category_choices %}
+                    <option value="{{ value }}" {% if current_category == value %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="min_price" class="form-label">Min Amount</label>
+            <input type="number" name="min_price" id="min_price" class="form-control form-control-sm" 
+                   step="0.01" min="0" placeholder="0.00" value="{{ min_price }}">
+        </div>
+        <div class="col-md-2">
+            <label for="max_price" class="form-label">Max Amount</label>
+            <input type="number" name="max_price" id="max_price" class="form-control form-control-sm" 
+                   step="0.01" min="0" placeholder="999.99" value="{{ max_price }}">
+        </div>
+        <div class="col-md-3">
+            <label for="sort" class="form-label">Sort By</label>
+            <select name="sort" id="sort" class="form-select form-select-sm">
+                <option value="date_desc" {% if current_sort == 'date_desc' %}selected{% endif %}>Date (Newest First)</option>
+                <option value="date_asc" {% if current_sort == 'date_asc' %}selected{% endif %}>Date (Oldest First)</option>
+                <option value="name_asc" {% if current_sort == 'name_asc' %}selected{% endif %}>Name (A-Z)</option>
+                <option value="name_desc" {% if current_sort == 'name_desc' %}selected{% endif %}>Name (Z-A)</option>
+                <option value="amount_asc" {% if current_sort == 'amount_asc' %}selected{% endif %}>Amount (Low to High)</option>
+                <option value="amount_desc" {% if current_sort == 'amount_desc' %}selected{% endif %}>Amount (High to Low)</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm me-2">
+                Apply Filters
+            </button>
+            <a href="{% url 'view_group' group.id %}" class="btn btn-outline-secondary btn-sm">
+                Clear
+            </a>
+        </div>
+    </form>
+</div>
+                    
+                    <a href="{% url 'add_expense' group.id %}" class="btn btn-success btn-sm">
+                        + Add New Split
+                    </a>
+                    
+                </div>
+
+                {% if expenses %}
+                <div class="accordion" id="expensesAccordion">
+                    {% for expense in expenses %}
+                    <div class="accordion-item expense-item">
+                        <h2 class="accordion-header" id="heading{{ expense.id }}">
+                            <button class="accordion-button collapsed" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse{{ expense.id }}"
+                                    aria-expanded="false" 
+                                    aria-controls="collapse{{ expense.id }}">
+                                <div class="d-flex justify-content-between w-100">
+                                    <span>{{ expense.name }}</span>
+                                    <span>{{ expense.date|date:"M d, Y" }}</span>  
+                                    <span class="badge bg-secondary">{{ expense.get_category_display }}</span>
+                                    <span class="ms-3">₹{{ expense.amount }}</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ expense.id }}" 
+                             class="accordion-collapse collapse" 
+                             aria-labelledby="heading{{ expense.id }}" 
+                             data-bs-parent="#expensesAccordion">
+                            <div class="accordion-body p-0">
+                               <table class="table table-hover mb-0">
+    <thead class="table-light">
+        <tr>
+            <th>Member</th>
+            <th>Share</th>
+            <th>Status</th>
+            {% if expense.paid_by == user %}
+            <th>Action</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for split in expense.expensesplit_set.all %}
+        <tr class="split-row">
+            <td>
+                {{ split.user.username }}
+                {% if split.user == expense.paid_by %}
+                <span class="badge bg-info ms-2">Payer</span>
+                {% endif %}
+            </td>
+            <td>₹{{ split.share|floatformat:2 }}</td>
+            <td>
+                {% if split.is_settled %}
+                    <span class="badge bg-success">Paid</span>
+                {% else %}
+                    <span class="badge bg-warning">Pending</span>
+                {% endif %}
+            </td>
+            {% if expense.paid_by == user %}
+            <td>
+                {% if not split.is_settled and split.user != user %}
+                <form method="POST" action="{% url 'mark_paid' split.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-success">
+                        Mark Paid
+                    </button>
+                </form>
+                {% elif split.user == user %}
+                <span class="text-muted">You paid</span>
+                {% endif %}
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    No expenses recorded yet.
+                   
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'list_groups' %}" class="btn btn-outline-secondary">← Back to Groups</a>
+                    {% if group.creator == user %}
+                    <a href="{% url 'add_members' group.id %}" class="btn btn-primary">Add Members</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+function confirmRemove(username) {
+    return confirm(`Are you sure you want to remove ${username}? ` + 
+                  `This action will be cancelled if they have pending payments.`);
+}
+
+</script>
+</body>
+</html>
